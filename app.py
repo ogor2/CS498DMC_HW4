@@ -4,7 +4,7 @@ from neo4j import GraphDatabase
 app = Flask(__name__)
 
 uri = "bolt://localhost:7687"
-auth = ("neo4j", "YOUR_PASSWORD")
+auth = ("neo4j", "12345678")
 driver = GraphDatabase.driver(uri=uri, auth=auth)
 
 # returns counts of each attribute and trip relationship
