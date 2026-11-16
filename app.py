@@ -17,7 +17,7 @@ def graph_summary():
         WITH driver_count, count(c) as company_count
         MATCH (a:Area)
         WITH driver_count, company_count, count(a) as area_count
-        MATCH (d)-[t:Trip]->(a)
+        MATCH ()-[t:TRIP]->()
         RETURN driver_count, company_count, area_count, count(t) as trip_count
     """).records[0]
 
