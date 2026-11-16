@@ -1,11 +1,15 @@
 from flask import Flask, request
 from neo4j import GraphDatabase
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, count, avg, round
 
 app = Flask(__name__)
 
 uri = "bolt://localhost:7687"
 auth = ("neo4j", "12345678")
 driver = GraphDatabase.driver(uri=uri, auth=auth)
+
+spark = (SparkSession.builder.appName("HW4API").master("local[1]").config("spark.driver.memory", "1g").config("spark.sql.shuffle.partitions", "2").getOrCreate())
 
 # returns counts of each attribute and trip relationship
 @app.route("/graph-summary")
@@ -105,7 +109,72 @@ def avg_fare_by_company():
             for c in companies
         ]
     }
-  
+
+@app.route("/area-stats")
+def area_stats():
+    area_id = request.args.get("area_id", type=int)
+    taxi_df = spark.read.csv("taxi_trips_clean.csv", header=True, inferSchema=True)
+
+    avgs = df.filter(col("dropoff_area") == area_id).groupBy("dropoff_area").agg(count("*").alias("trip_count"),round(avg("fare"), 2).alias("avg_fare"),round(avg("trip_seconds"), 0).alias("avg_trip_secs")).collect()
+    return {
+        "area_id": area_id,
+        "trip_count": avgs[0]["trip_count"],
+        "avg_fare": avgs[0]["avg_fare"],
+        "avg_trip_seconds": int(avgs[0]["avg_trip_secs"])
+    }
+
+    
+@app.route("/top-pickup-areas")
+def top_pickup_areas():
+    n = request.args.get("n", type=int)
+    
+    taxi_df = spark.read.csv("taxi_trips_clean.csv", header=True, inferSchema=True)
+    areas = taxi_df.groupBy("pickup_area").agg(count("*").alias("trip_count")).orderBy(col("trip_count").desc()).limit(n).collect()
+
+    return {
+        "areas": [
+            {
+                "pickup_area": area["pickup_area"], "trip_count": area["trip_count"]
+            }
+            for area in areas
+        ]
+    }
+
+@app.route("/company-compare")
+def company_compare():
+    company1 = request.args.get("company1")
+    company2 = request.args.get("company2")
+
+    taxi_df = spark.read.csv("taxi_trips_clean.csv", header=True, inferSchema=True)
+    taxi_df = taxi_df.withColumn("fare_per_minute",col("fare") / (col("trip_seconds") /60.0))
+    df.createOrReplaceTempView("trips")
+
+    companies = spark.sql("""
+        SELECT company,
+               COUNT(*) AS trip_count,
+               ROUND(AVG(fare), 2) AS avg_fare,
+               ROUND(AVG(fare_per_minute), 2) AS avg_fare_per_minute,
+               ROUND(AVG(trip_seconds), 0) AS avg_trip_seconds
+        FROM trips
+        WHERE company IN (:company1, :company2)
+        GROUP BY company
+    """, args={"company1": company1, "company2": company2}).collect()
+
+    if len(records) != len(set([company1, company2])):
+        return {"error": "one or more companies not found"}
+    return {
+        "comparison": [
+            {
+                "company": c["company"],
+                "trip_count": c["trip_count"],
+                "avg_fare": c["avg_fare"],
+                "avg_fare_per_minute": c["avg_fare_per_minute"],
+                "avg_trip_seconds": int(c["avg_trip_seconds"])
+            }
+            for c in companies
+        ]
+    }
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 
