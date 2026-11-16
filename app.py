@@ -115,7 +115,7 @@ def area_stats():
     area_id = request.args.get("area_id", type=int)
     taxi_df = spark.read.csv("taxi_trips_clean.csv", header=True, inferSchema=True)
 
-    avgs = df.filter(col("dropoff_area") == area_id).groupBy("dropoff_area").agg(count("*").alias("trip_count"),round(avg("fare"), 2).alias("avg_fare"),round(avg("trip_seconds"), 0).alias("avg_trip_secs")).collect()
+    avgs = taxi_df.filter(col("dropoff_area") == area_id).groupBy("dropoff_area").agg(count("*").alias("trip_count"),round(avg("fare"), 2).alias("avg_fare"),round(avg("trip_seconds"), 0).alias("avg_trip_secs")).collect()
     return {
         "area_id": area_id,
         "trip_count": avgs[0]["trip_count"],
@@ -147,7 +147,7 @@ def company_compare():
 
     taxi_df = spark.read.csv("taxi_trips_clean.csv", header=True, inferSchema=True)
     taxi_df = taxi_df.withColumn("fare_per_minute",col("fare") / (col("trip_seconds") /60.0))
-    df.createOrReplaceTempView("trips")
+    taxi_df.createOrReplaceTempView("trips")
 
     companies = spark.sql("""
         SELECT company,
@@ -160,7 +160,7 @@ def company_compare():
         GROUP BY company
     """, args={"company1": company1, "company2": company2}).collect()
 
-    if len(records) != len(set([company1, company2])):
+    if len(companies) != len(set([company1, company2])):
         return {"error": "one or more companies not found"}
     return {
         "comparison": [
