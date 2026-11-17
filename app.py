@@ -115,7 +115,7 @@ def area_stats():
     area_id = request.args.get("area_id", type=int)
     taxi_df = spark.read.csv("taxi_trips_clean.csv", header=True, inferSchema=True)
 
-    avgs = taxi_df.filter(col("dropoff_area") == area_id).groupBy("dropoff_area").agg(count("*").alias("trip_count"),round(avg("fare"), 2).alias("avg_fare"),round(avg("trip_seconds"), 0).alias("avg_trip_secs")).collect()
+    avgs = taxi_df.filter(col("dropoff_area") == area_id).groupBy("dropoff_area").agg(count("*").alias("trip_count"),avg("fare").alias("avg_fare"),avg("trip_seconds").alias("avg_trip_secs")).collect()
     return {
         "area_id": area_id,
         "trip_count": avgs[0]["trip_count"],
