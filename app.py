@@ -120,7 +120,7 @@ def area_stats():
         "area_id": area_id,
         "trip_count": avgs[0]["trip_count"],
         "avg_fare": avgs[0]["avg_fare"],
-        "avg_trip_seconds": int(avgs[0]["avg_trip_secs"])
+        "avg_trip_seconds": avgs[0]["avg_trip_secs"]
     }
 
     
