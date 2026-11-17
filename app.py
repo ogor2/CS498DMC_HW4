@@ -152,9 +152,9 @@ def company_compare():
     companies = spark.sql("""
         SELECT company,
                COUNT(*) AS trip_count,
-               ROUND(AVG(fare), 2) AS avg_fare,
-               ROUND(AVG(fare_per_minute), 2) AS avg_fare_per_minute,
-               ROUND(AVG(trip_seconds), 0) AS avg_trip_seconds
+               AVG(fare) AS avg_fare,
+               AVG(fare_per_minute) AS avg_fare_per_minute,
+               AVG(trip_seconds) AS avg_trip_seconds
         FROM trips
         WHERE company IN (:company1, :company2)
         GROUP BY company
@@ -169,7 +169,7 @@ def company_compare():
                 "trip_count": c["trip_count"],
                 "avg_fare": c["avg_fare"],
                 "avg_fare_per_minute": c["avg_fare_per_minute"],
-                "avg_trip_seconds": int(c["avg_trip_seconds"])
+                "avg_trip_seconds": c["avg_trip_seconds"]
             }
             for c in companies
         ]
